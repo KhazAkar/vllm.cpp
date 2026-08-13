@@ -64,7 +64,11 @@ tensors are classified as deliberate skips rather than generic unmapped
 tensors.  The model is untied and BF16-only.
 
 Query scaling is transformers-faithful by default and has an environment-gated
-opt-out for A/B comparison.  The implementation records the pinned-vLLM
+opt-out for A/B comparison.  Positions below 16384 need no multiply because
+their exact scale is 1.0.  Positions at or above 16384 currently refuse with a
+named missing row-scale operation rather than silently producing unscaled
+queries; adding a CPU-first row-scale op is an explicit follow-up owed for
+long-context execution.  The implementation records the pinned-vLLM
 discrepancy explicitly: pinned `mistral.py` reads a top-level
 `config.llama_4_scaling` dictionary, while these checkpoints carry only the
 nested `rope_parameters["llama_4_scaling_beta"]`.  Therefore the pinned vLLM
@@ -75,9 +79,10 @@ parity evidence.
 ## Risks and known gaps
 
 - The query scale is a per-position, per-query-row operation not expressible by
-  the existing scalar attention scale.  If the existing tensor-operation
-  surface cannot represent it, a CPU-first row-vector multiply operation is
-  required and must be implemented for the user's ROCm/Vulkan reference tiers.
+  the existing scalar/column-vector operation.  Short contexts below 16384
+  skip it exactly; long contexts are explicitly refused with a named missing
+  row-scale operation.  A CPU-first row-vector multiply operation remains owed
+  for long-context execution and the CUDA arm is owed thereafter.
 - No image processor, vision encoder, projector, image-token path, GGUF path,
   or FP8 path is included.
 - No real checkpoint load or token parity result is claimed in this spike.

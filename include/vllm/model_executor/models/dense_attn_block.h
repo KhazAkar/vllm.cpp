@@ -335,7 +335,8 @@ inline StepInputs BuildStepInputs(Dev d, const std::vector<int32_t>& positions,
 inline DBuf AttnBlock(Dev d, const Qwen3DenseAttnWeights& w, const HfConfig& cfg,
                       const Tensor& dhn, const StepInputs& si,
                       const CommonAttentionMetadata& meta, const PagedKvCache& kv, int64_t T,
-                      const TensorParallel* tp = nullptr) {
+                      const TensorParallel* tp = nullptr,
+                      const Tensor* rope_cache = nullptr) {
   const int64_t H = cfg.hidden_size;
   const int64_t Hq = cfg.num_attention_heads;
   const int64_t Hkv = cfg.num_key_value_heads;
@@ -425,7 +426,8 @@ inline DBuf AttnBlock(Dev d, const Qwen3DenseAttnWeights& w, const HfConfig& cfg
   // either dtype, so adoption is behaviour-preserving by construction and the
   // only new thing is the backend's fused realisation.
   const bool fused_preamble =
-      FusedChainAdoptEnabled() && rot > 0 && has_qk_norm && (attn_f32 || RopeCacheEnabled());
+      FusedChainAdoptEnabled() && rot > 0 && has_qk_norm &&
+      rope_cache == nullptr && (attn_f32 || RopeCacheEnabled());
   if (fused_preamble) {
     // f32 A/B ADOPT: the whole preamble through vt::FusedChain(kAttnQkNormRope) —
     // the Tier-0 composite = RmsNorm(q,false) + RmsNorm(k,false) + RopeFromCache,
@@ -487,7 +489,11 @@ inline DBuf AttnBlock(Dev d, const Qwen3DenseAttnWeights& w, const HfConfig& cfg
       vt::RmsNorm(d.q, q2, q2, wqn, vt::RmsNormArgs{eps, false});
       vt::RmsNorm(d.q, k2, k2, wkn, vt::RmsNormArgs{eps, false});
     }
-    if (RopeCacheEnabled() && rot > 0) {
+    if (rope_cache != nullptr && rot > 0) {
+      Tensor k3v = k3;
+      vt::RopeFromCache(d.q, q3, &k3v, si.positions.t(), *rope_cache,
+                        MakeRopeArgs(cfg));
+    } else if (RopeCacheEnabled() && rot > 0) {
       Tensor k3v = k3;
       vt::RopeFromCache(d.q, q3, &k3v, si.rope_row_idx.t(), si.cos_sin_bf16.t(),
                         MakeRopeArgs(cfg));

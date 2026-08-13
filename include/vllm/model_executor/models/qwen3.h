@@ -103,6 +103,9 @@ struct Qwen3DenseWeights {
   OwnedTensor embed_tokens;  // bf16 [vocab, H]  (NOT transposed; embed lookup)
   OwnedTensor final_norm;    // bf16 [H]
   OwnedTensor lm_head;       // bf16 [H, vocab] Matmul-B; EMPTY when tied
+  // Optional model-owned cos/sin cache. Empty for ordinary dense models;
+  // Ministral-3 populates this with its precomputed YaRN cache.
+  OwnedTensor rope_cos_sin_yarn;
   std::vector<Qwen3DenseLayerWeights> layers;
 };
 

@@ -36,7 +36,7 @@ std::string Prefix(const std::unordered_map<std::string, const SafetensorsFile*>
 void ClassifyTensorNames(
     const std::unordered_map<std::string, const SafetensorsFile*>& where,
     const std::string& prefix) {
-  const std::string text_prefix = prefix == "model." ? "model." : prefix;
+  const std::string& text_prefix = prefix;
   for (const auto& [name, unused] : where) {
     (void)unused;
     if (name.rfind("model.vision_tower.", 0) == 0 ||
@@ -70,7 +70,7 @@ Ministral3Weights LoadMinistral3Weights(
            "ministral3: num_hidden_layers must be positive");
 
   Ministral3Weights out;
-  auto& w = out.dense;
+  auto& w = out;
   w.tie_word_embeddings = RawBool(config.raw, "tie_word_embeddings", false);
   w.attention_bias = RawBool(config.raw, "attention_bias", false);
   if (config.torch_dtype.find("float8") != std::string::npos ||
@@ -106,10 +106,10 @@ Ministral3Weights LoadMinistral3Weights(
                              /*is_neox_style=*/true, config.rope_parameters,
                              vt::DType::kBF16);
   const vt::Tensor cache = rope->cos_sin_cache();
-  out.rope_cos_sin_yarn =
+  w.rope_cos_sin_yarn =
       MakeOwned(vt::DType::kBF16, {cache.shape[0], cache.shape[1]});
-  std::memcpy(out.rope_cos_sin_yarn.bytes.data(), cache.data,
-              out.rope_cos_sin_yarn.bytes.size());
+  std::memcpy(w.rope_cos_sin_yarn.bytes.data(), cache.data,
+              w.rope_cos_sin_yarn.bytes.size());
   return out;
 }
 

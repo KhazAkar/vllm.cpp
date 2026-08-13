@@ -7,10 +7,7 @@
 
 namespace vllm {
 
-struct Ministral3Weights {
-  MistralWeights dense;
-  OwnedTensor rope_cos_sin_yarn;
-};
+using Ministral3Weights = MistralWeights;
 class Ministral3Model {
  public:
   static std::vector<float> Forward(

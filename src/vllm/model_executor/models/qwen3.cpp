@@ -111,7 +111,8 @@ DBuf MlpBlock(Dev d, const Qwen3DenseMlpWeights& w, const HfConfig& cfg,
 void RunLayer(Dev d, const Qwen3DenseLayerWeights& layer, const HfConfig& cfg,
               DBuf& hidden, DBuf& res, const StepInputs& si,
               const CommonAttentionMetadata& meta, const PagedKvCache& kv, int64_t T,
-              const TensorParallel* tp = nullptr) {
+              const TensorParallel* tp = nullptr,
+              const Tensor* rope_cache = nullptr) {
   const int64_t H = cfg.hidden_size;
   const float eps = static_cast<float>(cfg.rms_norm_eps);
 
@@ -123,7 +124,8 @@ void RunLayer(Dev d, const Qwen3DenseLayerWeights& layer, const HfConfig& cfg,
     vt::RmsNorm(d.q, dhn.t(), hidden.t(), w_in, vt::RmsNormArgs{eps, false}, &res.t());
   }
 
-  DBuf attn = AttnBlock(d, layer.attn, cfg, dhn.t(), si, meta, kv, T, tp);
+  DBuf attn =
+      AttnBlock(d, layer.attn, cfg, dhn.t(), si, meta, kv, T, tp, rope_cache);
 
   Tensor w_post = ResidentWeight(d, layer.post_attention_layernorm, {H});
   DBuf dh2(d, DType::kBF16, {T, H});
@@ -248,10 +250,16 @@ DBuf ForwardLayers(Dev d, const Tensor& hidden_in,
   res.Zero(d);
 
   StepInputs si = BuildStepInputs(d, positions, attn_meta, config);
+  Tensor yarn_cache;
+  if (!weights.rope_cos_sin_yarn.Empty())
+    yarn_cache = ResidentWeight(d, weights.rope_cos_sin_yarn);
+  const Tensor* rope_cache =
+      yarn_cache.rank == 0 ? nullptr : &yarn_cache;
 
   for (int64_t l = 0; l < config.num_hidden_layers; ++l)
     RunLayer(d, weights.layers[static_cast<size_t>(l)], config, hidden, res, si,
-             attn_meta, attn_kv[static_cast<size_t>(l)], T);
+             attn_meta, attn_kv[static_cast<size_t>(l)], T, nullptr,
+             rope_cache);
 
   // Final RMSNorm over the fused stream (res += hidden; std norm), then lm_head.
   Tensor w_fn = ResidentWeight(d, weights.final_norm, {H});

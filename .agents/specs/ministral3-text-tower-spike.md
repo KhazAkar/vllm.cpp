@@ -116,8 +116,21 @@ environment.
 Stop and report rather than silently broadening scope if:
 
 1. the shared dense seam cannot support YaRN or row scaling without an
-   untracked backend exception;
+   untracked backend exception.  The implementation now extends the shared
+   dense attention seam with an optional model-owned RoPE cache; the ordinary
+   path remains unchanged when that cache is absent.
 2. a checkpoint tensor cannot be classified as loaded or deliberately skipped;
 3. a requested image, GGUF, or FP8 input would reach an accidental fallback;
 4. a real-checkpoint or token-parity claim would require downloading a large
    artifact or access to unavailable GPU/oracle hardware.
+
+## Follow-up correction
+
+The original implementation's private Ministral forward was removed after
+review found that it destroyed the persistent residual stream between layers.
+Ministral now aliases the existing Mistral/Qwen3-dense weights and delegates to
+the shared residual-preserving forward.  The only model-specific forward seam
+is the optional precomputed YaRN cache passed to shared attention, indexed by
+the real token positions.  CPU synthetic coverage compares the plain
+cache-absent Ministral and shared dense paths byte-for-byte and verifies that a
+supplied YaRN cache changes the result.

@@ -51,6 +51,10 @@ RED-first CPU tests will cover:
 - `DeviceScratch` materializing and copying host data when binding is not
   allowed.
 
+Set `VT_VULKAN_MEMORY_INFO=1` on a hardware run to emit the selected memory
+type, heap index/size, unified eligibility, and the
+`bar_backed_discrete` verdict for the report.
+
 If the test harness cannot register a fake backend for `DeviceScratch`, that
 coverage will be reported as unavailable rather than silently skipped.
 

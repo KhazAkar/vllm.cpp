@@ -60,6 +60,7 @@ TEST_CASE("Vulkan memory selection prefers device-local host-visible memory") {
   CHECK(selected.heap_index == 0);
   CHECK(selected.heap_size == 8u << 30);
   CHECK(selected.unified);
+  CHECK_FALSE(selected.bar_backed_discrete);
 
   auto rebar = Properties({host, preferred}, {2u << 30, 16u << 30});
   selected = vt::vulkan::SelectMemoryType(rebar,
@@ -68,6 +69,7 @@ TEST_CASE("Vulkan memory selection prefers device-local host-visible memory") {
   CHECK(selected.heap_index == 1);
   CHECK(selected.heap_size == 16u << 30);
   CHECK(selected.unified);
+  CHECK(selected.bar_backed_discrete);
 
   auto no_rebar = Properties({host}, {256u << 20});
   selected = vt::vulkan::SelectMemoryType(
@@ -76,6 +78,7 @@ TEST_CASE("Vulkan memory selection prefers device-local host-visible memory") {
   CHECK(selected.heap_index == 0);
   CHECK(selected.heap_size == 256u << 20);
   CHECK(selected.unified);
+  CHECK_FALSE(selected.bar_backed_discrete);
 }
 
 TEST_CASE("host pointer binding defaults to unified memory and scratch copies") {

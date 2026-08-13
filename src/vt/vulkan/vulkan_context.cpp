@@ -146,6 +146,12 @@ const bool kDispatchStats = [] {
   return v != nullptr && std::strcmp(v, "0") != 0;
 }();
 
+// Memory-selection diagnostic, enabled by VT_VULKAN_MEMORY_INFO.
+const bool kMemoryInfo = [] {
+  const char* v = std::getenv("VT_VULKAN_MEMORY_INFO");
+  return v != nullptr && std::strcmp(v, "0") != 0;
+}();
+
 // HOST-SIDE PHASE PROFILE, enabled by VT_VULKAN_HOST_PROFILE (BACKEND-VULKAN-
 // HOSTDISPATCH).
 //
@@ -866,11 +872,15 @@ VulkanContext::VulkanContext() {
   memory_type_index_ = static_cast<uint32_t>(selection.type_index);
   memory_heap_index_ = selection.heap_index;
   memory_heap_size_ = selection.heap_size;
-  std::fprintf(stderr,
-               "[vt vulkan] memory type=%u heap=%u heap_size=%llu unified=%s\n",
-               memory_type_index_, memory_heap_index_,
-               static_cast<unsigned long long>(memory_heap_size_),
-               unified_memory_ ? "true" : "false");
+  if (kMemoryInfo) {
+    std::fprintf(stderr,
+                 "[vt vulkan] memory type=%u heap=%u heap_size=%llu unified=%s "
+                 "bar_backed_discrete=%s\n",
+                 memory_type_index_, memory_heap_index_,
+                 static_cast<unsigned long long>(memory_heap_size_),
+                 unified_memory_ ? "true" : "false",
+                 selection.bar_backed_discrete ? "true" : "false");
+  }
 
   // ONE COMMAND POOL PER IN-FLIGHT SLOT. vkResetCommandPool resets every buffer
   // allocated from the pool, so a single shared pool cannot be reset while any

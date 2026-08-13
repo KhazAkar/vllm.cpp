@@ -141,6 +141,20 @@ TEST_CASE("Ministral-3 query scale mirrors Transformers floor semantics") {
         doctest::Approx(1.0 + 0.1 * std::log(3.0)));
 }
 
+TEST_CASE("Ministral-3 refuses long-context query scaling unless opted out") {
+  vllm::HfConfig config = TinyConfig();
+  config.rope_parameters.original_max_position_embeddings = 16384;
+  setenv("VT_MINISTRAL3_QUERY_SCALE", "1", 1);
+  CHECK_THROWS_WITH(
+      vllm::CheckMinistral3QueryScaling({16384}, config),
+      "Ministral-3 long-context query scaling refused: missing CPU-first "
+      "row-scale op for positions >= original_max_position_embeddings");
+
+  setenv("VT_MINISTRAL3_QUERY_SCALE", "0", 1);
+  CHECK_NOTHROW(vllm::CheckMinistral3QueryScaling({16384}, config));
+  unsetenv("VT_MINISTRAL3_QUERY_SCALE");
+}
+
 TEST_CASE("Ministral-3 architectures resolve") {
   CHECK(vllm::ModelRegistry::Resolve(
             std::vector<std::string>{"Ministral3ForCausalLM"})

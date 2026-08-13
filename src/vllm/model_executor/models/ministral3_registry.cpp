@@ -54,6 +54,7 @@ ForwardLogits ForwardMinistral3(LoadedModel& model,
     throw std::runtime_error(
         "Ministral-3 image inputs refused: vision tower and multimodal "
         "projector are not implemented");
+  CheckMinistral3QueryScaling(input.positions, input.config);
   auto& m = static_cast<Ministral3LoadedModel&>(model);
   if (input.gather_logits)
     return Ministral3Model::ForwardDevice(

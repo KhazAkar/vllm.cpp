@@ -38,4 +38,7 @@ double Ministral3QueryScale(int64_t position, double beta,
 
 bool Ministral3QueryScalingEnabled();
 
+void CheckMinistral3QueryScaling(const std::vector<int32_t>& positions,
+                                 const HfConfig& config);
+
 }  // namespace vllm

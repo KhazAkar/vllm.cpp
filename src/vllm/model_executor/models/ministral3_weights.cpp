@@ -127,4 +127,18 @@ bool Ministral3QueryScalingEnabled() {
   return e == nullptr || e[0] != '0';
 }
 
+void CheckMinistral3QueryScaling(const std::vector<int32_t>& positions,
+                                 const HfConfig& config) {
+  if (!Ministral3QueryScalingEnabled()) return;
+  const int64_t original =
+      config.rope_parameters.original_max_position_embeddings.value_or(16384);
+  for (int32_t position : positions) {
+    if (position >= original)
+      throw std::runtime_error(
+          "Ministral-3 long-context query scaling refused: missing "
+          "CPU-first row-scale op for positions >= "
+          "original_max_position_embeddings");
+  }
+}
+
 }  // namespace vllm

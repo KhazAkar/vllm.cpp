@@ -127,6 +127,10 @@ class VulkanBackend final : public Backend {
 
   bool UnifiedMemory() const override { return VulkanContext::Get().unified_memory(); }
 
+  // Vulkan's mapped allocations are host-addressable, but arbitrary host
+  // pointers are not Vulkan allocations and cannot be bound in descriptors.
+  bool HostPointerCanBeBoundAsDeviceMemory() const override { return false; }
+
   // Every allocation is HOST_VISIBLE|HOST_COHERENT and persistently mapped by
   // AllocBuffer, and Copy/Memset above are already a plain host memcpy/memset
   // over exactly that pointer. So this is not a new claim -- it NAMES the

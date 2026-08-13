@@ -7,7 +7,7 @@
 // scatter pair-lists) the vt ops consume. Those derived tensors must live on the
 // SAME device as the logits. Upstream builds them with torch (async_tensor_h2d /
 // scatter_add on the device); here DeviceScratch owns that materialization:
-//   - unified-memory backends (CPU, GB10) wrap the host buffer in place (0-copy);
+//   - host-pointer-bindable backends (CPU, GB10) wrap the host buffer in place;
 //   - discrete backends alloc device memory and copy the host buffer up,
 //     freeing it in the destructor.
 #ifndef VLLM_V1_SAMPLE_DEVICE_SCRATCH_H_
@@ -33,7 +33,7 @@ class DeviceScratch {
     int64_t numel = 1;
     for (int64_t s : shape) numel *= s;
     bytes_ = static_cast<size_t>(numel) * vt::SizeOf(dtype);
-    if (backend_->UnifiedMemory()) {
+    if (backend_->HostPointerCanBeBoundAsDeviceMemory()) {
       // Host and device share one address space: point straight at the host
       // buffer (const_cast is safe — the ops treat inputs as read-only).
       tensor_ = vt::Tensor::Contiguous(const_cast<void*>(host), dtype, device, shape);

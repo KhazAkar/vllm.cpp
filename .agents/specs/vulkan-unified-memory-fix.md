@@ -2,8 +2,10 @@
 
 ## Issue and scope
 
-This follow-up addresses the Vulkan memory-property split tracked under the
-`BACKEND-VULKAN` row. It is intentionally separate from model work and is
+This follow-up addresses the Vulkan memory-property split tracked under
+`BACKEND-VULKAN`, especially issues
+[#125](https://github.com/mudler/vllm.cpp/issues/125) and
+[#203](https://github.com/mudler/vllm.cpp/issues/203). It is intentionally separate from model work and is
 limited to two backend seams:
 
 1. whether a plain host pointer may be bound as a device tensor; and
@@ -71,3 +73,18 @@ No staging path or device-local-only allocation is added. A discrete board
 without a BAR-backed host-visible device-local heap will retain the existing
 host-visible allocation ceiling. The user's RX 7700S memory topology remains
 pending their Vulkan capability report.
+
+## Outcome
+
+The supplied code claims were confirmed: Vulkan allocations are persistently
+mapped host-visible/coherent storage, `Copy`/`Memset` are host operations,
+`DeviceMemoryIsHostAddressable()` is true, `DeviceScratch` was the
+host-pointer aliasing site, and reference-tier eligibility uses
+`UnifiedMemory()`. The fix keeps preferred memory-type selection and makes the
+unified result true for both the preferred and fallback host-mapped choices.
+
+CPU tests cover all three synthetic memory layouts and the copy-vs-alias seam.
+The Vulkan Release build compiled the changed backend, but this host has no
+conformant Vulkan device, so the runtime Vulkan override test and backend
+device tests were unverified/skipped. BAR/ReBAR performance and the RX 7700S
+heap topology remain hardware-pending.

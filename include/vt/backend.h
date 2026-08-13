@@ -51,6 +51,14 @@ class Backend {
   // True when host and device share one memory space (CPU, GB10, Apple).
   virtual bool UnifiedMemory() const = 0;
 
+  // True when an arbitrary host pointer may be bound as device memory. This
+  // differs from UnifiedMemory(): Vulkan allocations are host-mapped, but a
+  // std::vector pointer is not a Vulkan allocation and cannot be descriptor-
+  // bound. The default preserves the historical CPU/CUDA/ROCm/Metal behavior.
+  virtual bool HostPointerCanBeBoundAsDeviceMemory() const {
+    return UnifiedMemory();
+  }
+
   // True when a pointer returned by Alloc() may be DEREFERENCED BY THE HOST
   // directly -- loaded, stored, memcpy'd -- with no map/unmap call and no
   // staging bounce.

@@ -43,6 +43,7 @@
 #include "vulkan_loader.h"
 #include "vulkan_spirv.h"
 #include "vt/dtype.h"  // VT_CHECK
+#include "vt/vulkan_memory.h"
 
 namespace vt::vulkan {
 namespace {
@@ -282,9 +283,9 @@ void Check(VkResult r, const char* what) {
 // memory types the buffer's requirements allow and take the first that carries
 // every required property flag. We keep its ORDERED FALLBACK shape
 // (`ggml_vk_create_buffer`, :3065-3090) — first choice DEVICE_LOCAL as well as
-// host-visible/coherent (the unified case: GB10 exposes exactly such a type on
-// its single 89.72 GiB heap, and so does llvmpipe), falling back to plain
-// host-visible/coherent on a discrete GPU.
+// host-visible/coherent (preferred when a BAR-backed device-local heap exists),
+// falling back to plain host-visible/coherent on a discrete GPU. Unified-memory
+// eligibility is separate: every selected allocation is still host mapped.
 constexpr VkMemoryPropertyFlags kHostFlags =
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
@@ -855,11 +856,21 @@ VulkanContext::VulkanContext() {
   // fallback, llama.cpp `ggml_vk_create_buffer`:3065-3090 shape.
   VkPhysicalDeviceMemoryProperties mem{};
   Api().vkGetPhysicalDeviceMemoryProperties(probe.physical_device, &mem);
-  int type = FindMemoryType(mem, ~0u, kHostFlags | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-  unified_memory_ = type >= 0;
-  if (type < 0) type = FindMemoryType(mem, ~0u, kHostFlags);
-  VT_CHECK(type >= 0, "vulkan: no HOST_VISIBLE|HOST_COHERENT memory type");
-  memory_type_index_ = static_cast<uint32_t>(type);
+  VkPhysicalDeviceProperties device_properties{};
+  Api().vkGetPhysicalDeviceProperties(probe.physical_device, &device_properties);
+  const MemorySelection selection =
+      SelectMemoryType(mem, device_properties.deviceType);
+  VT_CHECK(selection.type_index >= 0,
+           "vulkan: no HOST_VISIBLE|HOST_COHERENT memory type");
+  unified_memory_ = selection.unified;
+  memory_type_index_ = static_cast<uint32_t>(selection.type_index);
+  memory_heap_index_ = selection.heap_index;
+  memory_heap_size_ = selection.heap_size;
+  std::fprintf(stderr,
+               "[vt vulkan] memory type=%u heap=%u heap_size=%llu unified=%s\n",
+               memory_type_index_, memory_heap_index_,
+               static_cast<unsigned long long>(memory_heap_size_),
+               unified_memory_ ? "true" : "false");
 
   // ONE COMMAND POOL PER IN-FLIGHT SLOT. vkResetCommandPool resets every buffer
   // allocated from the pool, so a single shared pool cannot be reset while any

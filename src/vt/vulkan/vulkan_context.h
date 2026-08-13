@@ -312,6 +312,9 @@ class VulkanContext {
   int api_major() const { return api_major_; }
   int api_minor() const { return api_minor_; }
   bool unified_memory() const { return unified_memory_; }
+  uint32_t memory_type_index() const { return memory_type_index_; }
+  uint32_t memory_heap_index() const { return memory_heap_index_; }
+  uint64_t memory_heap_size() const { return memory_heap_size_; }
   const std::string& device_name() const { return device_name_; }
   uint32_t max_workgroup_count_x() const { return max_workgroup_count_x_; }
   // The two float-controls properties that decide whether our f32 arithmetic is
@@ -494,6 +497,8 @@ class VulkanContext {
   void* mutex_ = nullptr;            // std::mutex*
   uint32_t queue_family_ = 0;
   uint32_t memory_type_index_ = 0;
+  uint32_t memory_heap_index_ = 0;
+  uint64_t memory_heap_size_ = 0;
   int api_major_ = 0;
   int api_minor_ = 0;
   bool unified_memory_ = false;

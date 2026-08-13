@@ -1619,6 +1619,8 @@ target_include_directories(test_llama_paged_engine PRIVATE
 # sliding_window null). Checkpoint-gated, dgx-only.
 vllm_cpp_add_test(test_mistral_load vllm/models/test_mistral_load.cpp)
 target_include_directories(test_mistral_load PRIVATE ${CMAKE_SOURCE_DIR}/src)
+vllm_cpp_add_test(test_ministral3 vllm/models/test_ministral3.cpp)
+target_include_directories(test_ministral3 PRIVATE ${CMAKE_SOURCE_DIR}/src)
 vllm_cpp_add_test(test_mistral_paged_engine parity/test_mistral_paged_engine.cpp)
 target_compile_definitions(test_mistral_paged_engine PRIVATE
   PARITY_GOLDENS_DIR="${CMAKE_SOURCE_DIR}/tests/parity/goldens")

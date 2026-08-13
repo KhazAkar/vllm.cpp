@@ -87,7 +87,7 @@ are our reading of their documented behavior, not measurements.
 The supported set is exactly what the C++ registry registers: every
 architecture self-registers via `REGISTER_VLLM_MODEL`, and
 `scripts/check-supported-models.py` gates this list against the source so it
-cannot drift. Today that is **38 registered architectures**. Each row names the
+cannot drift. Today that is **40 registered architectures**. Each row names the
 checkpoint it was gated against and the verdict; caveats are in
 [STATUS.md](STATUS.md), agent detail in `.agents/model-matrix.md`. A mergeable
 gate/up MLP routes through one shared merged-GEMM method, so a tuned arm added
@@ -116,6 +116,7 @@ speed-pending, which [BENCHMARKS.md](BENCHMARKS.md) tracks.
 | `LlamaForCausalLM`, `InternLM3ForCausalLM` | Llama-3.2-1B, 01-ai/Yi-Coder-1.5B-Chat, internlm3-8b-instruct | strict 16/16 each vs vLLM 0.25.0 | pending |
 | `InternLM2ForCausalLM` | internlm2-chat-1_8b | near-tie 16/16 vs vLLM 0.25.0 | pending |
 | `MistralForCausalLM` | Mistral-7B-v0.3 | strict 16/16 vs vLLM 0.25.0 | pending |
+| `Ministral3ForCausalLM`, `Mistral3ForConditionalGeneration` | Ministral-3 3B/8B Base-2512 BF16 (not run here) | ◐ text-only spike: synthetic config/registry/CPU regression tests; real checkpoint and token parity pending | pending; vision, GGUF, and FP8 explicitly refused |
 | `OPTForCausalLM` | facebook/opt-125m | strict 6/6 vs vLLM 0.25.0 | pending |
 | `PhiForCausalLM` | microsoft/phi-2 | near-tie 16/16 vs vLLM 0.25.0 | pending |
 | `Phi3ForCausalLM` | microsoft/phi-4 (14B), Phi-3 | strict 16/16 vs vLLM 0.25.0 | pending |

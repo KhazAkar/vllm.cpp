@@ -46,6 +46,7 @@ struct RopeParameters {
   double attn_factor = 1.0;
   int64_t beta_fast = 32;
   int64_t beta_slow = 1;
+  std::optional<double> llama_4_scaling_beta = std::nullopt;
   bool apply_yarn_scaling = true;
   bool truncate = true;
 

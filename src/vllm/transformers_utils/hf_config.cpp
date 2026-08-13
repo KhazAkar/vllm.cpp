@@ -232,6 +232,9 @@ RopeParameters ParseRopeParameters(const nlohmann::json& text,
   params.attn_factor = GetDouble(*raw, "attn_factor", 1.0);
   params.beta_fast = GetInt(*raw, "beta_fast", 32);
   params.beta_slow = GetInt(*raw, "beta_slow", 1);
+  if (raw->contains("llama_4_scaling_beta"))
+    params.llama_4_scaling_beta =
+        GetDouble(*raw, "llama_4_scaling_beta", 0.0);
   params.apply_yarn_scaling =
       GetBool(*raw, "apply_yarn_scaling", true);
   params.truncate = GetBool(*raw, "truncate", true);

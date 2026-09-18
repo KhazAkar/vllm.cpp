@@ -59,6 +59,7 @@ target_compile_definitions(test_version PRIVATE
 vllm_cpp_add_test(test_sampling_params vllm/test_sampling_params.cpp)
 vllm_cpp_add_test(test_punica_cpu vllm/lora/test_punica_cpu.cpp)
 vllm_cpp_add_test(test_lora_layers vllm/lora/test_lora_layers.cpp)
+vllm_cpp_add_test(test_lora_mapping vllm/lora/test_lora_mapping.cpp)
 vllm_cpp_add_test(test_plugin_system
   vllm/plugins/test_plugin_system.cpp
   vllm/plugins/toy_model_plugin.cpp)
@@ -848,6 +849,14 @@ vllm_cpp_add_test(test_deepseek_v4_compressor vllm/models/test_deepseek_v4_compr
 # from-first-principles double-precision derivation. Full-model gate multi-Spark-
 # blocked; MoE/device-kernel are W6/W7 (.agents/specs/deepseek-v4-flash.md).
 vllm_cpp_add_test(test_deepseek_v4_mhc vllm/models/test_deepseek_v4_mhc.cpp)
+# DeepSeek-V4.1-Flash W3a — Engram: the n-gram hash over a compressed token
+# vocabulary, the prime bucket layout, the sharded fp8 / ue8m0 table lookup and
+# the sigmoid gate that injects the lookup into the hyper-connection manifold.
+# Ports tests/kernels/test_engram.py @ vLLM e77daef89e (778 lines), including
+# its two scalar oracles and their rtol=0/atol=0 tolerances; adds the ue8m0
+# byte-0 case its own fixtures cannot reach, and the prime-layout case upstream
+# leaves ungated (.agents/specs/deepseek-v4-1-flash.md, wave W3a).
+vllm_cpp_add_test(test_deepseek_v4_1_engram vllm/models/test_deepseek_v4_1_engram.cpp)
 # DeepSeek-V4-Flash W6 — the sqrtsoftplus + hash-routed MoE: the V4 router score
 # function (sqrt∘softplus), the noaux_tc bias-for-selection top-k, the hash
 # `tid2eid` route that bypasses top-k, and the clamped SwiGLU expert activation.
@@ -856,6 +865,13 @@ vllm_cpp_add_test(test_deepseek_v4_mhc vllm/models/test_deepseek_v4_mhc.cpp)
 # references. Full-model gate multi-Spark-blocked (156.7 GiB); device-kernel +
 # forward assembly are W7 (.agents/specs/deepseek-v4-flash.md).
 vllm_cpp_add_test(test_deepseek_v4_moe vllm/models/test_deepseek_v4_moe.cpp)
+# DeepSeek-V4.1-Flash W3b — the MXFP8 32x32 UE8M0 linear family host reference.
+# Ports tests/quantization/test_fp8.py:67-238 @ vLLM e77daef89e (a BIT-EXACT
+# oracle for the scale expansion) and derives the quantizer / emulation-linear
+# cases from first principles in double precision, because every upstream mxfp8
+# linear test is CUDA/ROCm-gated. No e2e gate exists: no published V4.1 artifact
+# fits any device this project reaches (.agents/specs/deepseek-v4-1-flash.md).
+vllm_cpp_add_test(test_deepseek_v4_1_mxfp8 vllm/models/test_deepseek_v4_1_mxfp8.cpp)
 # DeepSeek-V4-Flash W7 — the DeepseekV4Model::Forward ASSEMBLY: composes the four
 # landed host primitives (W3 DSA/MLA seams, W4 compressor + fp8_ds_mla KV, W5 MHC
 # + Sinkhorn, W6 sqrtsoftplus/hash MoE) into an end-to-end logits producer at a
@@ -2160,6 +2176,8 @@ vllm_cpp_add_test(test_chunked_local_attention
   vllm/v1/attention/test_chunked_local_attention.cpp)
 vllm_cpp_add_test(test_rotary_embedding
   vllm/model_executor/layers/rotary_embedding/test_rotary_embedding.cpp)
+vllm_cpp_add_test(test_linear_scaling_rope
+  vllm/model_executor/layers/rotary_embedding/test_linear_scaling_rope.cpp)
 vllm_cpp_add_test(test_pooler
   vllm/model_executor/layers/pooler/test_pooler.cpp)
 vllm_cpp_add_test(test_pooler_heads
@@ -2794,6 +2812,14 @@ else()
     vllm::vllm vllm_test_main)
 endif()
 vllm_cpp_set_warnings(test_ops_paged_attn_sharedk_wmma_p1_gpu)
+# GFX1100-TG200-T2b: ROCm decode-graph capture through ModelRegistry::Forward.
+# Self-skips without a ROCm device (vt::rocm::DeviceAvailable()) and on non-
+# gfx1100 arches (per-arch opt-in keeps the path eager). On gfx1100 it enters
+# the production forward and exercises the captured decode-graph path.
+vllm_cpp_add_test(test_rocm_decode_graph_forward
+  vllm/models/test_rocm_decode_graph_forward.cpp)
+target_include_directories(test_rocm_decode_graph_forward PRIVATE
+  ${CMAKE_SOURCE_DIR}/src)
 endif()
 if(VLLM_CPP_METAL)
   vllm_cpp_add_test(test_metal_backend vt/test_metal_backend.cpp)
@@ -3346,6 +3372,7 @@ vllm_cpp_add_test(test_ops_activation vt/test_ops_activation.cpp)
 vllm_cpp_add_test(test_ops_rope vt/test_ops_rope.cpp)
 vllm_cpp_add_test(test_ops_rope_cache vt/test_ops_rope_cache.cpp)
 vllm_cpp_add_test(test_ops_fused_norm_rope vt/test_ops_fused_norm_rope.cpp)
+vllm_cpp_add_test(test_compiled_gemma vt/test_compiled_gemma.cpp)
 vllm_cpp_add_test(test_ops_gdn vt/test_ops_gdn.cpp)
 target_include_directories(test_ops_gdn PRIVATE ${CMAKE_SOURCE_DIR}/src)
 if(VLLM_CPP_TRITON)

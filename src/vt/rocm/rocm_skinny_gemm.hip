@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include "vt/ops.h"
 
@@ -36,17 +37,17 @@ __device__ __forceinline__ unsigned int min__(uint32_t a, uint32_t b) {
   return min(a, b);
 }
 
-// gfx1151 detection (RDNA3.5) - matches vLLM's on_gfx1151()
-__device__ __forceinline__ bool on_gfx1151() {
-#if defined(__GFX11__)
-  // Runtime detection via hipDeviceGetAttribute
-  int arch = 0;
-  hipDeviceGetAttribute(&arch, hipDeviceAttributeGcnArch, 0);
-  // gfx1151 = 115100
-  return (arch >= 115100 && arch < 115200);
-#else
-  return false;
-#endif
+// gfx1151 detection (RDNA3.5) - matches vLLM's on_gfx1151(). Host-side, from
+// the current device's gcnArchName prefix; cached once like DeviceCuCount.
+inline bool on_gfx1151() {
+  static const bool cache = [] {
+    int dev = 0;
+    if (hipGetDevice(&dev) != hipSuccess) return false;
+    hipDeviceProp_t prop{};
+    if (hipGetDeviceProperties(&prop, dev) != hipSuccess) return false;
+    return std::string_view(prop.gcnArchName).substr(0, 7) == "gfx1151";
+  }();
+  return cache;
 }
 
 // Donor's persistent-workgroup splitter (host-side in skinny_gemms.cu:1169).
